@@ -1,0 +1,78 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Image Shrink - Compressor Online</title>
+    <link href="https://cdn.jsdelivr.net" rel="stylesheet">
+    <style>
+        body { background-color: #f8f9fa; height: 100vh; display: flex; align-items: center; }
+        .card { border-radius: 15px; box-shadow: 0 4px 15px rgba(0,0,0,0.1); }
+        #preview { max-width: 100%; border-radius: 8px; margin-top: 15px; display: none; }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <div class="row justify-content-center">
+        <div class="col-md-6">
+            <div class="card p-4">
+                <h3 class="text-center mb-4">Redutor de Qualidade</h3>
+                
+                <input type="file" id="upload" class="form-control mb-3" accept="image/*">
+                
+                <label class="form-label">Qualidade: <span id="q-val" class="fw-bold">50</span>%</label>
+                <input type="range" id="quality" class="form-range mb-3" min="1" max="100" value="50">
+
+                <button id="compress-btn" class="btn btn-primary w-100 fw-bold">Comprimir e Baixar</button>
+                
+                <div class="text-center">
+                    <img id="preview" src="#" alt="Preview da imagem">
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    const upload = document.getElementById('upload');
+    const qualityInput = document.getElementById('quality');
+    const qVal = document.getElementById('q-val');
+    const compressBtn = document.getElementById('compress-btn');
+    const preview = document.getElementById('preview');
+
+    qualityInput.oninput = () => qVal.innerText = qualityInput.value;
+
+    compressBtn.onclick = () => {
+        if (!upload.files[0]) return alert("Selecione uma imagem!");
+
+        const reader = new FileReader();
+        reader.readAsDataURL(upload.files[0]);
+        reader.onload = (e) => {
+            const img = new Image();
+            img.src = e.target.result;
+            img.onload = () => {
+                const canvas = document.createElement('canvas');
+                const ctx = canvas.getContext('2d');
+                
+                canvas.width = img.width;
+                canvas.height = img.height;
+                ctx.drawImage(img, 0, 0);
+
+                const quality = qualityInput.value / 100;
+                const dataUrl = canvas.toDataURL('image/jpeg', quality);
+
+                preview.src = dataUrl;
+                preview.style.display = 'inline-block';
+
+                const link = document.createElement('a');
+                link.download = 'imagem-comprimida.jpg';
+                link.href = dataUrl;
+                link.click();
+            };
+        };
+    };
+</script>
+
+</body>
+</html>
