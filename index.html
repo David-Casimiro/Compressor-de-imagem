@@ -3,74 +3,128 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Image Shrink - Compressor Online</title>
+    <title>Image Optimizer Pro</title>
     <link href="https://cdn.jsdelivr.net" rel="stylesheet">
     <style>
-        body { background-color: #f8f9fa; height: 100vh; display: flex; align-items: center; }
-        .card { border-radius: 15px; box-shadow: 0 4px 15px rgba(0,0,0,0.1); }
-        #preview { max-width: 100%; border-radius: 8px; margin-top: 15px; display: none; }
+        body { background-color: #f0f2f5; min-height: 100vh; display: flex; align-items: center; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
+        .main-container { background: white; border-radius: 20px; box-shadow: 0 10px 30px rgba(0,0,0,0.08); overflow: hidden; }
+        .sidebar { background: #ffffff; border-right: 1px solid #eee; padding: 30px; }
+        .preview-area { background: #f8f9fa; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 20px; min-height: 450px; }
+        #preview-img { max-width: 100%; max-height: 400px; border-radius: 8px; box-shadow: 0 5px 15px rgba(0,0,0,0.1); display: none; }
+        .drop-zone { border: 2px dashed #007bff; border-radius: 10px; padding: 40px; text-align: center; transition: 0.3s; cursor: pointer; color: #007bff; }
+        .drop-zone:hover { background: rgba(0,123,255,0.05); }
+        .stats { font-size: 0.85rem; color: #666; margin-top: 10px; }
     </style>
 </head>
 <body>
 
-<div class="container">
-    <div class="row justify-content-center">
-        <div class="col-md-6">
-            <div class="card p-4">
-                <h3 class="text-center mb-4">Redutor de Qualidade</h3>
-                
-                <input type="file" id="upload" class="form-control mb-3" accept="image/*">
-                
-                <label class="form-label">Qualidade: <span id="q-val" class="fw-bold">50</span>%</label>
-                <input type="range" id="quality" class="form-range mb-3" min="1" max="100" value="50">
-
-                <button id="compress-btn" class="btn btn-primary w-100 fw-bold">Comprimir e Baixar</button>
-                
-                <div class="text-center">
-                    <img id="preview" src="#" alt="Preview da imagem">
-                </div>
+<div class="container main-container">
+    <div class="row">
+        <!-- Coluna de Controles (Esquerda) -->
+        <div class="col-lg-4 sidebar">
+            <h4 class="mb-4 fw-bold">Otimizador de Imagem</h4>
+            
+            <div class="drop-zone mb-4" id="drop-zone">
+                <span>Clique ou arraste a imagem aqui</span>
+                <input type="file" id="upload" hidden accept="image/*">
             </div>
+
+            <div class="mb-4">
+                <label class="form-label d-flex justify-content-between">
+                    Qualidade <span id="q-val" class="badge bg-primary">80%</span>
+                </label>
+                <input type="range" id="quality" class="form-range" min="1" max="100" value="80">
+                <p class="stats text-muted small">Qualidade menor = arquivo menor.</p>
+            </div>
+
+            <button id="download-btn" class="btn btn-success w-100 py-2 fw-bold" disabled>Baixar Imagem Otimizada</button>
+            
+            <div id="file-info" class="stats mt-4" style="display: none;">
+                <hr>
+                <p class="mb-1"><strong>Original:</strong> <span id="orig-size">-</span></p>
+                <p><strong>Novo:</strong> <span id="new-size">-</span></p>
+            </div>
+        </div>
+
+        <!-- Coluna de Preview (Direita) -->
+        <div class="col-lg-8 preview-area">
+            <div id="placeholder-text" class="text-muted">A pré-visualização aparecerá aqui</div>
+            <img id="preview-img" alt="Preview">
         </div>
     </div>
 </div>
 
 <script>
     const upload = document.getElementById('upload');
+    const dropZone = document.getElementById('drop-zone');
     const qualityInput = document.getElementById('quality');
     const qVal = document.getElementById('q-val');
-    const compressBtn = document.getElementById('compress-btn');
-    const preview = document.getElementById('preview');
+    const downloadBtn = document.getElementById('download-btn');
+    const previewImg = document.getElementById('preview-img');
+    const placeholderText = document.getElementById('placeholder-text');
+    const origSize = document.getElementById('orig-size');
+    const newSize = document.getElementById('new-size');
+    const fileInfo = document.getElementById('file-info');
 
-    qualityInput.oninput = () => qVal.innerText = qualityInput.value;
+    let currentImgData = null;
 
-    compressBtn.onclick = () => {
-        if (!upload.files[0]) return alert("Selecione uma imagem!");
+    // Trigger upload
+    dropZone.onclick = () => upload.click();
+    
+    upload.onchange = (e) => handleImage(e.target.files[0]);
 
+    function handleImage(file) {
+        if (!file) return;
+        origSize.innerText = (file.size / 1024).toFixed(2) + " KB";
+        
         const reader = new FileReader();
-        reader.readAsDataURL(upload.files[0]);
+        reader.readAsDataURL(file);
         reader.onload = (e) => {
-            const img = new Image();
-            img.src = e.target.result;
-            img.onload = () => {
-                const canvas = document.createElement('canvas');
-                const ctx = canvas.getContext('2d');
-                
-                canvas.width = img.width;
-                canvas.height = img.height;
-                ctx.drawImage(img, 0, 0);
-
-                const quality = qualityInput.value / 100;
-                const dataUrl = canvas.toDataURL('image/jpeg', quality);
-
-                preview.src = dataUrl;
-                preview.style.display = 'inline-block';
-
-                const link = document.createElement('a');
-                link.download = 'imagem-comprimida.jpg';
-                link.href = dataUrl;
-                link.click();
-            };
+            currentImgData = e.target.result;
+            processImage();
         };
+    }
+
+    function processImage() {
+        if (!currentImgData) return;
+        
+        const img = new Image();
+        img.src = currentImgData;
+        img.onload = () => {
+            const canvas = document.createElement('canvas');
+            const ctx = canvas.getContext('2d');
+            canvas.width = img.width;
+            canvas.height = img.height;
+            ctx.drawImage(img, 0, 0);
+
+            const quality = qualityInput.value / 100;
+            const dataUrl = canvas.toDataURL('image/jpeg', quality);
+
+            // Atualiza UI
+            previewImg.src = dataUrl;
+            previewImg.style.display = 'block';
+            placeholderText.style.display = 'none';
+            downloadBtn.disabled = false;
+            fileInfo.style.display = 'block';
+
+            // Estima tamanho novo
+            const head = 'data:image/jpeg;base64,'.length;
+            const sizeInBytes = Math.round((dataUrl.length - head) * 3 / 4);
+            newSize.innerText = (sizeInBytes / 1024).toFixed(2) + " KB";
+        };
+    }
+
+    // Atualiza preview em tempo real ao mexer no slider
+    qualityInput.oninput = () => {
+        qVal.innerText = qualityInput.value + "%";
+        processImage();
+    };
+
+    downloadBtn.onclick = () => {
+        const link = document.createElement('a');
+        link.download = 'otimizada-' + Date.now() + '.jpg';
+        link.href = previewImg.src;
+        link.click();
     };
 </script>
 
